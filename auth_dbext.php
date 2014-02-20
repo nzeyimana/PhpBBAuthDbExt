@@ -64,8 +64,10 @@ function login_dbext(&$username, &$password)
     $db_database  = "dbName";    // Here goes the Database containing the table below
     $db_table     = "tblUsers";  // Here will goes the table list users allowed to login into PHPBB   
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    $col_username = "username";
-    $col_password = "password";
+    $col_username = "username";// db-column for user's username in external db
+    $col_password = "password"; // db-column for user's password in external db
+    $col_usermail = "email";    // db-column for user's e-mail address in external db
+    $col_userlang = "language"; // db-column for user's language in external db
     $hashMethod   = "sha1"; // Can be one of:  md5, sha1, plain
                             // In case you choose to use a non-standard hashing function, be 
                             // sure to change below where the $hashedPassword variable is created
@@ -92,11 +94,11 @@ function login_dbext(&$username, &$password)
         $hashedPassword = $password;
     }
     $sql = 
-        "SELECT 11 as ID 
+        "SELECT 11 as ID, ".$col_usermail." AS EMAIL, ".$col_userlang." as LANGUAGE" 
         FROM " . $db_table . " 
         WHERE 
-            " . $col_username . " = '" . mysqli_real_escape_string($username)       . "' AND 
-            " . $col_password . " = '" . mysqli_real_escape_string($hashedPassword) . "' 
+            " . $col_username . " = '" . mysqli_real_escape_string($objMySqli, $username)       . "' AND 
+            " . $col_password . " = '" . mysqli_real_escape_string($objMySqli, $hashedPassword) . "' 
             ";
     
     if ( $result = $objMySqli->query($sql) )
@@ -109,6 +111,12 @@ function login_dbext(&$username, &$password)
                 'user_row'  => array('user_id' => ANONYMOUS),
             );
         }
+        $row_ext = $result->fetch_row();
+        $usermail = $row_ext[1];
+		$userlang = $row_ext[2];
+		$userlang = $userlang == 'de' ? 'de_x_sie' : 'en';
+        $result->close();
+		$objMySqli->close();
 
         $sql = 'SELECT user_id, username, user_password, user_passchg, user_email, user_type
             FROM ' . USERS_TABLE . "
@@ -141,7 +149,7 @@ function login_dbext(&$username, &$password)
         return array(
             'status'    => LOGIN_SUCCESS_CREATE_PROFILE,
             'error_msg' => false,
-            'user_row'  => user_row_dbext($username, sha1($password)),
+            'user_row'  => user_row_dbext($username, sha1($password), $usermail, $userlang),
         );
     } else {
         // TODO: Handle this situation
@@ -158,7 +166,7 @@ function login_dbext(&$username, &$password)
 /**
 * This function generates an array which can be passed to the user_add function in order to create a user
 */
-function user_row_dbext($username, $password)
+function user_row_dbext($username, $password, $usermail, $userlang)
 {
     global $db, $config, $user;
     // first retrieve default group id
@@ -179,10 +187,11 @@ function user_row_dbext($username, $password)
     return array(
         'username'      => $username,
         'user_password' => phpbb_hash($password), // Note: on my side, I don't use this because I want all passwords to remain on the remote system
-        'user_email'    => '', // You can retrieve this Email at the time the user is authenticated from the external table
+        'user_email'    => $usermail, // You can retrieve this Email at the time the user is authenticated from the external table
         'group_id'      => (int) $row['group_id'],
         'user_type'     => USER_NORMAL,
         'user_ip'       => $user->ip,
+        'user_lang'       => $userlang,
     );
 }
 
