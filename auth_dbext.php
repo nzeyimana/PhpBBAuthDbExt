@@ -95,8 +95,8 @@ function login_dbext(&$username, &$password)
         "SELECT 11 as ID 
         FROM " . $db_table . " 
         WHERE 
-            " . $col_username . " = '" . mysqli_real_escape_string($username)       . "' AND 
-            " . $col_password . " = '" . mysqli_real_escape_string($hashedPassword) . "' 
+            " . $col_username . " = '" . mysqli_real_escape_string($objMySqli, $username)       . "' AND 
+            " . $col_password . " = '" . mysqli_real_escape_string($objMySqli, $hashedPassword) . "' 
             ";
     
     if ( $result = $objMySqli->query($sql) )
